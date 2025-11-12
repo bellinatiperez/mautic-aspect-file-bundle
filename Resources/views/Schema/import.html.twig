@@ -1,0 +1,127 @@
+{% extends '@MauticCore/Default/content.html.twig' %}
+
+{% block mauticContent %}aspectfileSchema{% endblock %}
+
+{% block headerTitle %}Import Schema from Excel{% endblock %}
+
+{% block actions %}
+    <div class="btn-group">
+        <a href="{{ path('mautic_aspectfile_index') }}" class="btn btn-default">
+            <i class="fa fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Upload Excel File</h3>
+    </div>
+    <div class="panel-body">
+        <div class="alert alert-info">
+            <h4>Excel File Requirements:</h4>
+            <ul>
+                <li>First row must contain headers: <strong>No, Name, Data Type, Access Type, Offset, Length</strong></li>
+                <li>Start from row 2 for data</li>
+                <li>File format: .xlsx or .xls</li>
+            </ul>
+        </div>
+
+        <form id="import-form" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="schema-name">Schema Name</label>
+                        <input type="text" id="schema-name" name="name" class="form-control"
+                               placeholder="Enter schema name" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="schema-file">Excel File</label>
+                        <input type="file" id="schema-file" name="schema_file" class="form-control"
+                               accept=".xlsx,.xls" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <button type="submit" class="btn btn-primary" id="import-btn">
+                        <i class="fa fa-upload"></i> Import Schema
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <div id="import-result" style="display: none; margin-top: 20px;"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('import-form');
+    const resultDiv = document.getElementById('import-result');
+    const importBtn = document.getElementById('import-btn');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+
+        // Disable button and show loading
+        importBtn.disabled = true;
+        importBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Importing...';
+        resultDiv.style.display = 'none';
+
+        fetch('{{ path('mautic_aspectfile_import') }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const editUrl = `/s/aspectfile/schemas/edit/${data.schema_id}`;
+                const listUrl = '{{ path('mautic_aspectfile_index') }}';
+
+                resultDiv.className = 'alert alert-success';
+                resultDiv.innerHTML = `
+                    <h4><i class="fa fa-check"></i> Success!</h4>
+                    <p>Schema imported successfully with ${data.fields_count} fields.</p>
+                    <a href="${editUrl}" class="btn btn-primary">
+                        View Schema
+                    </a>
+                    <a href="${listUrl}" class="btn btn-default">
+                        Back to List
+                    </a>
+                `;
+                form.reset();
+            } else {
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerHTML = `
+                    <h4><i class="fa fa-exclamation-triangle"></i> Error</h4>
+                    <p>${data.error}</p>
+                `;
+            }
+            resultDiv.style.display = 'block';
+        })
+        .catch(error => {
+            resultDiv.className = 'alert alert-danger';
+            resultDiv.innerHTML = `
+                <h4><i class="fa fa-exclamation-triangle"></i> Error</h4>
+                <p>An error occurred during import: ${error.message}</p>
+            `;
+            resultDiv.style.display = 'block';
+        })
+        .finally(() => {
+            // Re-enable button
+            importBtn.disabled = false;
+            importBtn.innerHTML = '<i class="fa fa-upload"></i> Import Schema';
+        });
+    });
+});
+</script>
+{% endblock %}

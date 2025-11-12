@@ -1,0 +1,437 @@
+{% extends '@MauticCore/Default/content.html.twig' %}
+
+{% block mauticContent %}aspectfileSchema{% endblock %}
+
+{% block headerTitle %}AspectFile Schemas{% endblock %}
+
+{% block actions %}
+    <div class="btn-group">
+        <a href="{{ path('mautic_aspectfile_action', {'objectAction': 'new'}) }}" class="btn btn-primary">
+            <i class="fa fa-plus"></i> <span class="hidden-xs hidden-sm">New Schema</span>
+        </a>
+        <a href="{{ path('mautic_aspectfile_import') }}" class="btn btn-default">
+            <i class="fa fa-upload"></i> <span class="hidden-xs hidden-sm">Import from Excel</span>
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .schema-row {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .schema-row:hover {
+        background-color: #f5f5f5 !important;
+    }
+    .schema-row.selected {
+        background-color: #e3f2fd !important;
+    }
+    .schema-row.selected td {
+        border-color: #90caf9 !important;
+    }
+    .col-schema-checkbox {
+        width: 30px;
+    }
+    #schemaTable tbody tr td:first-child {
+        padding-left: 15px !important;
+    }
+
+    /* Selection bar style - matching Mautic emails */
+    #selection-bar {
+        background-color: #4e5d6c;
+        color: white;
+        padding: 10px 20px;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+    #selection-bar.active {
+        display: flex;
+    }
+    #selection-bar .selection-info {
+        font-size: 14px;
+        font-weight: normal;
+    }
+    #selection-bar .selection-actions {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+    }
+    #selection-bar .btn {
+        background-color: transparent;
+        border: none;
+        color: white;
+        font-size: 13px;
+        padding: 6px 12px;
+        font-weight: normal;
+    }
+    #selection-bar .btn:hover {
+        background-color: rgba(255,255,255,0.1);
+    }
+    #selection-bar .btn i {
+        margin-right: 5px;
+    }
+    #selection-bar .dropdown-toggle {
+        padding: 6px 10px;
+    }
+    #selection-bar .dropdown-toggle i {
+        margin: 0;
+    }
+</style>
+
+<div class="panel panel-default bdr-t-wdh-0 mb-0">
+    <div class="page-list">
+        {% if schemas|length > 0 %}
+            {# Selection bar - like Mautic emails #}
+            <div id="selection-bar">
+                <div class="selection-info">
+                    <span id="selected-count-text">0</span> item selecionado
+                </div>
+                <div class="selection-actions">
+                    <button type="button" class="btn btn-sm" onclick="Mautic.deleteSelected()">
+                        <i class="fa fa-trash"></i> Excluir seleção
+                    </button>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm dropdown-toggle" data-toggle="dropdown">
+                            <i class="fa fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-right" role="menu">
+                            <li>
+                                <a href="javascript:void(0);" onclick="Mautic.deleteSelected()">
+                                    <i class="fa fa-trash text-danger"></i> Excluir selecionados
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <button type="button" class="btn btn-sm" onclick="Mautic.cancelSelection()">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-body">
+                <form method="post" id="schema-batch-form">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered" id="schemaTable">
+                            <thead>
+                                <tr>
+                                    <th class="col-schema-checkbox pl-3">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="customCheck1" name="selectAll">
+                                            <label class="custom-control-label" for="customCheck1"></label>
+                                        </div>
+                                    </th>
+                                    <th>Name</th>
+                                    <th class="visible-md visible-lg">Description</th>
+                                    <th class="visible-md visible-lg">Fields</th>
+                                    <th class="visible-md visible-lg">Date created</th>
+                                    <th class="visible-md visible-lg">ID</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for schema in schemas %}
+                                    <tr class="schema-row" data-schema-id="{{ schema.id }}">
+                                        <td>
+                                            <div class="custom-control custom-checkbox">
+                                                <input type="checkbox" class="custom-control-input schema-checkbox" id="customCheck{{ schema.id }}" name="schemas[]" value="{{ schema.id }}">
+                                                <label class="custom-control-label" for="customCheck{{ schema.id }}"></label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <a href="{{ path('mautic_aspectfile_action', {'objectAction': 'edit', 'objectId': schema.id}) }}">
+                                                <span>{{ schema.name }}</span>
+                                            </a>
+                                        </td>
+                                        <td class="visible-md visible-lg">
+                                            <span>{{ schema.description|default('-') }}</span>
+                                        </td>
+                                        <td class="visible-md visible-lg">
+                                            <span>{{ schema.fields|length }} campos</span>
+                                        </td>
+                                        <td class="visible-md visible-lg">
+                                            <span>{{ schema.createdAt|date('F j, Y') }}</span>
+                                        </td>
+                                        <td class="visible-md visible-lg">
+                                            <span>{{ schema.id }}</span>
+                                        </td>
+                                        <td class="text-right">
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
+                                                    <i class="fa fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-right" role="menu">
+                                                    <li>
+                                                        <a href="{{ path('mautic_aspectfile_action', {'objectAction': 'edit', 'objectId': schema.id}) }}">
+                                                            <i class="fa fa-edit"></i> Edit
+                                                        </a>
+                                                    </li>
+                                                    <li class="divider"></li>
+                                                    <li>
+                                                        <a href="javascript:void(0);" onclick="Mautic.deleteSchema({{ schema.id }}, '{{ schema.name|escape('js') }}')">
+                                                            <i class="fa fa-trash text-danger"></i> Delete
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+        {% else %}
+            <div class="panel-body text-center">
+                <h3 class="text-muted"><i class="fa fa-database fa-fw"></i> No schemas found</h3>
+                <p>Create a new schema or import from an Excel file to get started.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Batch Delete Modal #}
+<div class="modal fade" id="batch-delete-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title">Excluir Schemas Selecionados</h4>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir <strong><span id="delete-count">0</span></strong> schema(s)?</p>
+                <p class="text-danger"><i class="fa fa-warning"></i> Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="Mautic.executeBatchDelete()">
+                    <i class="fa fa-trash"></i> Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+Mautic.deleteSchema = function(id, name) {
+    console.log('deleteSchema called', id, name);
+
+    if (!confirm('Tem certeza que deseja excluir o schema "' + name + '"?\n\nEsta ação não pode ser desfeita.')) {
+        return;
+    }
+
+    console.log('Confirmed, sending delete request');
+
+    // Use Mautic's global CSRF token
+    var headers = {
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    if (typeof mauticAjaxCsrf !== 'undefined') {
+        headers['X-CSRF-Token'] = mauticAjaxCsrf;
+    }
+
+    fetch('/s/aspectfile/schemas/delete/' + id, {
+        method: 'POST',
+        headers: headers,
+        credentials: 'same-origin'
+    })
+    .then(function(response) {
+        console.log('Response received:', response.status, response);
+        if (response.status === 302 || response.redirected) {
+            alert('Sessão expirada. Por favor, recarregue a página.');
+            location.reload();
+            return Promise.reject('Session expired');
+        }
+        if (!response.ok) {
+            return response.json().then(function(data) {
+                throw new Error(data.error || 'HTTP error ' + response.status);
+            });
+        }
+        return response.json();
+    })
+    .then(function(data) {
+        if (!data) return; // Session expired case
+
+        console.log('Response data:', data);
+
+        if (data && data.success) {
+            alert('Schema excluído com sucesso');
+            location.reload();
+        } else {
+            var errorMsg = 'Erro desconhecido';
+            if (data && data.error) {
+                errorMsg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+            }
+            alert('Erro ao excluir schema: ' + errorMsg);
+        }
+    })
+    .catch(function(error) {
+        console.error('Delete error:', error);
+        if (error === 'Session expired') return;
+        var errorMsg = error.message || String(error);
+        alert('Erro ao excluir schema: ' + errorMsg);
+    });
+};
+
+Mautic.deleteSelected = function() {
+    var selectedCount = document.querySelectorAll('.schema-checkbox:checked').length;
+    if (selectedCount === 0) {
+        return;
+    }
+
+    document.getElementById('delete-count').textContent = selectedCount;
+    $('#batch-delete-modal').modal('show');
+};
+
+Mautic.cancelSelection = function() {
+    // Uncheck all checkboxes
+    document.querySelectorAll('.schema-checkbox').forEach(function(checkbox) {
+        checkbox.checked = false;
+        updateRowSelection(checkbox);
+    });
+
+    var selectAllCheckbox = document.querySelector('input[name="selectAll"]');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+    }
+
+    updateSelectedCount();
+};
+
+Mautic.executeBatchDelete = function() {
+    var selectedIds = [];
+    document.querySelectorAll('.schema-checkbox:checked').forEach(function(checkbox) {
+        selectedIds.push(checkbox.value);
+    });
+
+    if (selectedIds.length === 0) {
+        return;
+    }
+
+    console.log('Batch delete:', selectedIds);
+
+    // Use Mautic's global CSRF token
+    var headers = {
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    if (typeof mauticAjaxCsrf !== 'undefined') {
+        headers['X-CSRF-Token'] = mauticAjaxCsrf;
+    }
+
+    // Delete each schema sequentially
+    var deletePromises = selectedIds.map(function(id) {
+        return fetch('/s/aspectfile/schemas/delete/' + id, {
+            method: 'POST',
+            headers: headers,
+            credentials: 'same-origin'
+        }).then(function(response) {
+            if (response.status === 302 || response.redirected) {
+                throw new Error('Sessão expirada');
+            }
+            return response.json();
+        });
+    });
+
+    Promise.all(deletePromises)
+        .then(function(results) {
+            var successCount = results.filter(function(r) { return r.success; }).length;
+            var failCount = results.length - successCount;
+
+            if (failCount === 0) {
+                alert(successCount + ' schema(s) excluído(s) com sucesso');
+            } else {
+                alert(successCount + ' schema(s) excluído(s), ' + failCount + ' falharam');
+            }
+
+            $('#batch-delete-modal').modal('hide');
+            setTimeout(function() {
+                location.reload();
+            }, 500);
+        })
+        .catch(function(error) {
+            console.error('Batch delete error:', error);
+            alert('Erro durante exclusão em lote: ' + error.message);
+        });
+};
+
+function updateRowSelection(checkbox) {
+    var row = checkbox.closest('.schema-row');
+    if (checkbox.checked) {
+        row.classList.add('selected');
+    } else {
+        row.classList.remove('selected');
+    }
+}
+
+function updateSelectedCount() {
+    var count = document.querySelectorAll('.schema-checkbox:checked').length;
+    var selectionBar = document.getElementById('selection-bar');
+    var countText = document.getElementById('selected-count-text');
+
+    if (count > 0) {
+        selectionBar.classList.add('active');
+        countText.textContent = count;
+    } else {
+        selectionBar.classList.remove('active');
+    }
+
+    // Update select all checkbox state
+    var selectAllCheckbox = document.querySelector('input[name="selectAll"]');
+    var allCheckboxes = document.querySelectorAll('.schema-checkbox');
+    var checkedCheckboxes = document.querySelectorAll('.schema-checkbox:checked');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+        selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all checkbox
+    var selectAllCheckbox = document.querySelector('input[name="selectAll"]');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            var checkboxes = document.querySelectorAll('.schema-checkbox');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = selectAllCheckbox.checked;
+                updateRowSelection(checkbox);
+            });
+            updateSelectedCount();
+        });
+    }
+
+    // Individual checkboxes
+    document.querySelectorAll('.schema-checkbox').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            updateRowSelection(this);
+            updateSelectedCount();
+        });
+    });
+
+    // Click on row to select (except on links and buttons)
+    document.querySelectorAll('.schema-row').forEach(function(row) {
+        row.addEventListener('click', function(e) {
+            // Don't trigger if clicking on link, button, or dropdown
+            if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' ||
+                e.target.closest('.dropdown') || e.target.closest('.btn-group') ||
+                e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') {
+                return;
+            }
+
+            var checkbox = this.querySelector('.schema-checkbox');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                updateRowSelection(checkbox);
+                updateSelectedCount();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

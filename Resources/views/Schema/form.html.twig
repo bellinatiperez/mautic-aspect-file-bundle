@@ -1,0 +1,105 @@
+{% extends '@MauticCore/Default/content.html.twig' %}
+
+{% block mauticContent %}aspectfileSchema{% endblock %}
+
+{% block headerTitle %}
+    {% if entity.id %}
+        Edit Schema: {{ entity.name }}
+    {% else %}
+        New Schema
+    {% endif %}
+{% endblock %}
+
+{% block actions %}
+    <div class="btn-group">
+        <a href="{{ path('mautic_aspectfile_index') }}" class="btn btn-default">
+            <i class="fa fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+    {{ form_start(form) }}
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Schema Information</h3>
+        </div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_row(form.name) }}
+                </div>
+                <div class="col-md-3">
+                    {{ form_row(form.fileExtension) }}
+                </div>
+                <div class="col-md-3">
+                    {{ form_row(form.isPublished) }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    {{ form_row(form.description) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if entity.id and entity.fields|length > 0 %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Schema Fields ({{ entity.fields|length }})</h3>
+        </div>
+        <div class="panel-body">
+            <table class="table table-striped table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th width="5%">#</th>
+                        <th width="25%">Name</th>
+                        <th width="15%">Data Type</th>
+                        <th width="10%">Start</th>
+                        <th width="10%">Length</th>
+                        <th width="20%">Access Type</th>
+                        <th width="15%">Mautic Field</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in entity.fields %}
+                        <tr>
+                            <td>{{ field.no }}</td>
+                            <td>{{ field.name }}</td>
+                            <td>{{ field.data_type }}</td>
+                            <td>{{ field.start_position }}</td>
+                            <td>{{ field.length }}</td>
+                            <td>{{ field.access_type|default('-') }}</td>
+                            <td>
+                                <select name="field_mapping[{{ field.no }}]" class="form-control input-sm">
+                                    <option value="">-- Not mapped --</option>
+                                    {% for alias, label in leadFields %}
+                                        <option value="{{ alias }}" {% if field.lead_field == alias %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="panel panel-default">
+        <div class="panel-footer text-right">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa fa-save"></i> Save
+            </button>
+            <a href="{{ path('mautic_aspectfile_index') }}" class="btn btn-default">
+                Cancel
+            </a>
+        </div>
+    </div>
+
+    {{ form_end(form) }}
+{% endblock %}
