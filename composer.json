@@ -2,7 +2,7 @@
     "name": "bellinatiperez/aspect-file-bundle",
     "description": "Mautic plugin for generating fixed-width text files from leads and uploading to MinIO/S3",
     "type": "mautic-plugin",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "keywords": ["mautic", "plugin", "aspect", "file", "minio", "s3"],
     "license": "GPL-3.0-or-later",
     "authors": [

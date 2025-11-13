@@ -93,6 +93,11 @@ class Engine
             throw new \RuntimeException(sprintf("'%s' directory not found", $this->migrationsPath));
         }
 
-        return array_diff($fileNames, ['.', '..']);
+        // Filter only PHP files
+        $phpFiles = array_filter($fileNames, function($fileName) {
+            return pathinfo($fileName, PATHINFO_EXTENSION) === 'php';
+        });
+
+        return array_values($phpFiles);
     }
 }
