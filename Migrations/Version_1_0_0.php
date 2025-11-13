@@ -5,44 +5,45 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticAspectFileBundle\Migrations;
 
 use Doctrine\DBAL\Schema\Schema;
-use Doctrine\DBAL\Types\Types;
-use Mautic\CoreBundle\Doctrine\PreUpAssertionMigration;
+use Doctrine\DBAL\Schema\SchemaException;
+use MauticPlugin\MauticAspectFileBundle\Migration\AbstractMigration;
 
 /**
  * Create aspect_file_schemas table
  */
-final class Version_1_0_0 extends PreUpAssertionMigration
+class Version_1_0_0 extends AbstractMigration
 {
-    protected const TABLE_NAME = 'aspect_file_schemas';
+    private string $table = 'aspect_file_schemas';
 
-    protected function preUpAssertions(): void
+    protected function isApplicable(Schema $schema): bool
     {
-        $this->skipAssertion(
-            fn (Schema $schema) => $schema->hasTable($this->getPrefixedTableName()),
-            'Table '.self::TABLE_NAME.' already exists'
-        );
+        try {
+            return !$schema->hasTable($this->concatPrefix($this->table));
+        } catch (SchemaException) {
+            return false;
+        }
     }
 
-    public function up(Schema $schema): void
+    protected function up(): void
     {
-        $table = $schema->createTable($this->getPrefixedTableName());
+        $tableName = $this->concatPrefix($this->table);
+        $idxName = $this->generatePropertyName($this->table, 'idx', ['name']);
+        $idxPublished = $this->generatePropertyName($this->table, 'idx', ['is_published']);
 
-        $table->addColumn('id', Types::INTEGER, ['autoincrement' => true, 'unsigned' => true]);
-        $table->addColumn('name', Types::STRING, ['length' => 191]);
-        $table->addColumn('description', Types::TEXT, ['notnull' => false]);
-        $table->addColumn('fields', Types::JSON, ['notnull' => true]);
-        $table->addColumn('file_extension', Types::STRING, ['length' => 10, 'default' => 'raw']);
-        $table->addColumn('line_length', Types::INTEGER, ['notnull' => false]);
-        $table->addColumn('is_published', Types::BOOLEAN, ['default' => true]);
-        $table->addColumn('created_at', Types::DATETIME_MUTABLE, ['notnull' => true]);
-
-        $table->setPrimaryKey(['id']);
-        $table->addIndex(['name'], $this->generatePropertyName(self::TABLE_NAME, 'idx', ['name']));
-        $table->addIndex(['is_published'], $this->generatePropertyName(self::TABLE_NAME, 'idx', ['is_published']));
-    }
-
-    public function down(Schema $schema): void
-    {
-        $schema->dropTable($this->getPrefixedTableName());
+        $this->addSql("
+            CREATE TABLE `{$tableName}` (
+                `id` INT UNSIGNED AUTO_INCREMENT NOT NULL,
+                `name` VARCHAR(191) NOT NULL,
+                `description` LONGTEXT DEFAULT NULL,
+                `fields` JSON NOT NULL,
+                `file_extension` VARCHAR(10) DEFAULT 'raw',
+                `line_length` INT DEFAULT NULL,
+                `is_published` TINYINT(1) DEFAULT 1,
+                `created_at` DATETIME NOT NULL,
+                PRIMARY KEY(`id`),
+                INDEX `{$idxName}` (`name`),
+                INDEX `{$idxPublished}` (`is_published`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
     }
 }

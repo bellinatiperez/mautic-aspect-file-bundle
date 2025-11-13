@@ -24,6 +24,31 @@ return [
                 'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\SchemaController::indexAction',
                 'defaults' => ['page' => 1],
             ],
+            // Batch routes
+            'mautic_aspectfile_batch_index' => [
+                'path' => '/aspectfile/batches/{page}',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\BatchController::indexAction',
+                'defaults' => ['page' => 1],
+            ],
+            'mautic_aspectfile_batch_view' => [
+                'path' => '/aspectfile/batch/{id}',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\BatchController::viewAction',
+                'requirements' => ['id' => '\d+'],
+            ],
+            'mautic_aspectfile_batch_reprocess' => [
+                'path' => '/aspectfile/batch/{id}/reprocess',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\BatchController::reprocessAction',
+                'requirements' => ['id' => '\d+'],
+            ],
+            'mautic_aspectfile_batch_delete' => [
+                'path' => '/aspectfile/batch/{id}/delete',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\BatchController::deleteAction',
+                'requirements' => ['id' => '\d+'],
+            ],
+            'mautic_aspectfile_batch_process' => [
+                'path' => '/aspectfile/batches/process',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\BatchController::processAction',
+            ],
         ],
     ],
 
@@ -34,6 +59,25 @@ return [
                     'route' => 'mautic_aspectfile_index',
                     'parent' => 'mautic.core.channels',
                     'priority' => 65,
+                    'checks' => [
+                        'integration' => [
+                            'AspectFile' => [
+                                'enabled' => true,
+                            ],
+                        ],
+                    ],
+                ],
+                'mautic.aspectfile.menu.batches' => [
+                    'route' => 'mautic_aspectfile_batch_index',
+                    'parent' => 'mautic.core.channels',
+                    'priority' => 64,
+                    'checks' => [
+                        'integration' => [
+                            'AspectFile' => [
+                                'enabled' => true,
+                            ],
+                        ],
+                    ],
                 ],
             ],
         ],
@@ -132,6 +176,21 @@ return [
                     'doctrine.orm.entity_manager',
                 ],
                 'public' => true,
+            ],
+            'mautic.aspectfile.controller.batch' => [
+                'class' => \MauticPlugin\MauticAspectFileBundle\Controller\BatchController::class,
+                'arguments' => [
+                    'doctrine',
+                    'translator',
+                    'mautic.core.service.flashbag',
+                    'twig',
+                    'mautic.aspectfile.model.aspectfile',
+                    'router',
+                ],
+                'public' => true,
+                'tags' => [
+                    'controller.service_arguments',
+                ],
             ],
         ],
         'commands' => [

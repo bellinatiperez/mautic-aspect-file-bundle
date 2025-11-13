@@ -96,7 +96,9 @@ class CampaignSubscriber implements EventSubscriberInterface
                 'schema_id' => $schemaId,
             ]);
 
-            $event->failAll("Schema not found: {$schemaId}");
+            // Use passWithError instead of fail to prevent infinite retries for config errors
+            // Schema not found is a configuration error that won't resolve by retrying
+            $event->passAllWithError("Schema not found: {$schemaId}");
 
             return;
         }

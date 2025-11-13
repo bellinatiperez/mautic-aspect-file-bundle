@@ -5,64 +5,63 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticAspectFileBundle\Migrations;
 
 use Doctrine\DBAL\Schema\Schema;
-use Doctrine\DBAL\Types\Types;
-use Mautic\CoreBundle\Doctrine\PreUpAssertionMigration;
+use Doctrine\DBAL\Schema\SchemaException;
+use MauticPlugin\MauticAspectFileBundle\Migration\AbstractMigration;
 
 /**
  * Create aspect_file_batches table
  */
-final class Version_1_0_1 extends PreUpAssertionMigration
+class Version_1_0_1 extends AbstractMigration
 {
-    protected const TABLE_NAME = 'aspect_file_batches';
+    private string $table = 'aspect_file_batches';
 
-    protected function preUpAssertions(): void
+    protected function isApplicable(Schema $schema): bool
     {
-        $this->skipAssertion(
-            fn (Schema $schema) => $schema->hasTable($this->getPrefixedTableName()),
-            'Table '.self::TABLE_NAME.' already exists'
-        );
+        try {
+            return !$schema->hasTable($this->concatPrefix($this->table));
+        } catch (SchemaException) {
+            return false;
+        }
     }
 
-    public function up(Schema $schema): void
+    protected function up(): void
     {
-        $table = $schema->createTable($this->getPrefixedTableName());
+        $tableName = $this->concatPrefix($this->table);
+        $schemaTable = $this->concatPrefix('aspect_file_schemas');
 
-        $table->addColumn('id', Types::INTEGER, ['autoincrement' => true, 'unsigned' => true]);
-        $table->addColumn('schema_id', Types::INTEGER, ['unsigned' => true]);
-        $table->addColumn('campaign_id', Types::INTEGER, ['unsigned' => true]);
-        $table->addColumn('event_id', Types::INTEGER, ['unsigned' => true]);
-        $table->addColumn('bucket_name', Types::STRING, ['length' => 191]);
-        $table->addColumn('file_name', Types::STRING, ['length' => 191, 'notnull' => false]);
-        $table->addColumn('file_path', Types::STRING, ['length' => 191, 'notnull' => false]);
-        $table->addColumn('file_name_template', Types::STRING, ['length' => 191, 'notnull' => false]);
-        $table->addColumn('status', Types::STRING, ['length' => 191, 'default' => 'PENDING']);
-        $table->addColumn('leads_count', Types::INTEGER, ['default' => 0]);
-        $table->addColumn('file_size_bytes', Types::BIGINT, ['notnull' => false]);
-        $table->addColumn('generated_at', Types::DATETIME_MUTABLE, ['notnull' => false]);
-        $table->addColumn('uploaded_at', Types::DATETIME_MUTABLE, ['notnull' => false]);
-        $table->addColumn('error_message', Types::TEXT, ['notnull' => false]);
-        $table->addColumn('created_at', Types::DATETIME_MUTABLE, ['notnull' => true]);
+        $fkSchema = $this->generatePropertyName($this->table, 'fk', ['schema_id']);
+        $idxSchema = $this->generatePropertyName($this->table, 'idx', ['schema_id']);
+        $idxCampaign = $this->generatePropertyName($this->table, 'idx', ['campaign_id']);
+        $idxEvent = $this->generatePropertyName($this->table, 'idx', ['event_id']);
+        $idxStatus = $this->generatePropertyName($this->table, 'idx', ['status']);
 
-        $table->setPrimaryKey(['id']);
-
-        // Add foreign key to aspect_file_schemas
-        $table->addForeignKeyConstraint(
-            $this->getPrefixedTableName('aspect_file_schemas'),
-            ['schema_id'],
-            ['id'],
-            ['onDelete' => 'CASCADE'],
-            $this->generatePropertyName(self::TABLE_NAME, 'fk', ['schema_id'])
-        );
-
-        // Add indexes
-        $table->addIndex(['schema_id'], $this->generatePropertyName(self::TABLE_NAME, 'idx', ['schema_id']));
-        $table->addIndex(['campaign_id'], $this->generatePropertyName(self::TABLE_NAME, 'idx', ['campaign_id']));
-        $table->addIndex(['event_id'], $this->generatePropertyName(self::TABLE_NAME, 'idx', ['event_id']));
-        $table->addIndex(['status'], $this->generatePropertyName(self::TABLE_NAME, 'idx', ['status']));
-    }
-
-    public function down(Schema $schema): void
-    {
-        $schema->dropTable($this->getPrefixedTableName());
+        $this->addSql("
+            CREATE TABLE `{$tableName}` (
+                `id` INT UNSIGNED AUTO_INCREMENT NOT NULL,
+                `schema_id` INT UNSIGNED NOT NULL,
+                `campaign_id` INT UNSIGNED NOT NULL,
+                `event_id` INT UNSIGNED NOT NULL,
+                `bucket_name` VARCHAR(191) NOT NULL,
+                `file_name` VARCHAR(191) DEFAULT NULL,
+                `file_path` VARCHAR(191) DEFAULT NULL,
+                `file_name_template` VARCHAR(191) DEFAULT NULL,
+                `status` VARCHAR(191) DEFAULT 'PENDING',
+                `leads_count` INT DEFAULT 0,
+                `file_size_bytes` BIGINT DEFAULT NULL,
+                `generated_at` DATETIME DEFAULT NULL,
+                `uploaded_at` DATETIME DEFAULT NULL,
+                `error_message` LONGTEXT DEFAULT NULL,
+                `created_at` DATETIME NOT NULL,
+                PRIMARY KEY(`id`),
+                INDEX `{$idxSchema}` (`schema_id`),
+                INDEX `{$idxCampaign}` (`campaign_id`),
+                INDEX `{$idxEvent}` (`event_id`),
+                INDEX `{$idxStatus}` (`status`),
+                CONSTRAINT `{$fkSchema}`
+                    FOREIGN KEY (`schema_id`)
+                    REFERENCES `{$schemaTable}` (`id`)
+                    ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
     }
 }

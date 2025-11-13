@@ -249,7 +249,23 @@ class BatchManager
             }
 
             if ($batch) {
-                $batch->setStatus(AspectFileBatch::STATUS_FAILED);
+                // Reset batch leads to PENDING to allow reprocessing
+                $this->logger->info('AspectFile: Resetting batch leads to PENDING for reprocessing', [
+                    'batch_id' => $batchId,
+                ]);
+
+                $this->em->createQueryBuilder()
+                    ->update(AspectFileBatchLead::class, 'bl')
+                    ->set('bl.status', ':pending')
+                    ->where('bl.batch = :batch')
+                    ->andWhere('bl.status = :generated')
+                    ->setParameter('pending', AspectFileBatchLead::STATUS_PENDING)
+                    ->setParameter('generated', AspectFileBatchLead::STATUS_GENERATED)
+                    ->setParameter('batch', $batch)
+                    ->getQuery()
+                    ->execute();
+
+                $batch->setStatus(AspectFileBatch::STATUS_PENDING);
                 $batch->setErrorMessage($e->getMessage());
                 $this->em->flush();
             }

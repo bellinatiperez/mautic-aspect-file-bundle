@@ -1,0 +1,151 @@
+{% extends '@MauticCore/Default/content.html.twig' %}
+
+{% block headerTitle %}{{ 'mautic.aspectfile.batch.header.index'|trans }}{% endblock %}
+
+{% block actions %}
+    <div class="btn-group">
+        <a href="{{ path('mautic_aspectfile_batch_process') }}"
+           class="btn btn-primary btn-sm"
+           data-toggle="ajax"
+           data-method="POST">
+            <i class="fa fa-refresh"></i> {{ 'mautic.aspectfile.batch.process.now'|trans }}
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="pa-md">
+    <div class="panel-body">
+        {% if batches|length == 0 %}
+            <div class="alert alert-info">
+                <i class="fa fa-info-circle"></i> {{ 'mautic.aspectfile.batch.none'|trans }}
+            </div>
+        {% else %}
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered">
+                    <thead>
+                        <tr>
+                            <th class="col-batch-id">{{ 'mautic.core.id'|trans }}</th>
+                            <th class="col-batch-schema">{{ 'mautic.aspectfile.schema'|trans }}</th>
+                            <th class="col-batch-campaign">{{ 'mautic.campaign.campaign'|trans }}</th>
+                            <th class="col-batch-status">{{ 'mautic.core.status'|trans }}</th>
+                            <th class="col-batch-leads">{{ 'mautic.lead.leads'|trans }}</th>
+                            <th class="col-batch-file">{{ 'mautic.aspectfile.file'|trans }}</th>
+                            <th class="col-batch-created">{{ 'mautic.core.date.added'|trans }}</th>
+                            <th class="col-batch-actions">{{ 'mautic.core.actions'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for batch in batches %}
+                            {% set stats = batchStats[batch.id] %}
+                            <tr>
+                                <td>
+                                    <a href="{{ path('mautic_aspectfile_batch_view', {'id': batch.id}) }}" data-toggle="ajax">
+                                        #{{ batch.id }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {{ batch.schema.name }}
+                                </td>
+                                <td>
+                                    Campaign #{{ batch.campaignId }}
+                                </td>
+                                <td>
+                                    {% if batch.status == 'PENDING' %}
+                                        <span class="label label-warning">{{ 'mautic.aspectfile.batch.status.pending'|trans }}</span>
+                                    {% elseif batch.status == 'GENERATING' %}
+                                        <span class="label label-info">{{ 'mautic.aspectfile.batch.status.generating'|trans }}</span>
+                                    {% elseif batch.status == 'UPLOADING' %}
+                                        <span class="label label-info">{{ 'mautic.aspectfile.batch.status.uploading'|trans }}</span>
+                                    {% elseif batch.status == 'UPLOADED' %}
+                                        <span class="label label-success">{{ 'mautic.aspectfile.batch.status.uploaded'|trans }}</span>
+                                    {% elseif batch.status == 'FAILED' %}
+                                        <span class="label label-danger">{{ 'mautic.aspectfile.batch.status.failed'|trans }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge badge-default">{{ stats.total }}</span>
+                                    {% if stats.pending > 0 %}
+                                        <span class="badge badge-warning" title="Pending">{{ stats.pending }}</span>
+                                    {% endif %}
+                                    {% if stats.generated > 0 %}
+                                        <span class="badge badge-success" title="Generated">{{ stats.generated }}</span>
+                                    {% endif %}
+                                    {% if stats.failed > 0 %}
+                                        <span class="badge badge-danger" title="Failed">{{ stats.failed }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if batch.fileName %}
+                                        <i class="fa fa-file-text"></i> {{ batch.fileName }}
+                                        {% if batch.fileSizeBytes %}
+                                            <br><small class="text-muted">{{ (batch.fileSizeBytes / 1024)|number_format(2) }} KB</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span title="{{ batch.createdAt|date('Y-m-d H:i:s') }}">
+                                        {{ batch.createdAt|date('Y-m-d H:i') }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ path('mautic_aspectfile_batch_view', {'id': batch.id}) }}"
+                                           class="btn btn-default btn-xs"
+                                           data-toggle="ajax"
+                                           title="{{ 'mautic.core.form.view'|trans }}">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                        {% if batch.status in ['FAILED', 'PENDING'] %}
+                                            <a href="{{ path('mautic_aspectfile_batch_reprocess', {'id': batch.id}) }}"
+                                               class="btn btn-warning btn-xs"
+                                               data-toggle="ajax"
+                                               data-method="POST"
+                                               title="{{ 'mautic.aspectfile.batch.reprocess'|trans }}">
+                                                <i class="fa fa-refresh"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# Pagination #}
+            {% if totalPages > 1 %}
+                <div class="text-center">
+                    <ul class="pagination">
+                        {% if page > 1 %}
+                            <li>
+                                <a href="{{ path('mautic_aspectfile_batch_index', {'page': page - 1}) }}" data-toggle="ajax">
+                                    <i class="fa fa-angle-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for p in 1..totalPages %}
+                            <li {% if p == page %}class="active"{% endif %}>
+                                <a href="{{ path('mautic_aspectfile_batch_index', {'page': p}) }}" data-toggle="ajax">
+                                    {{ p }}
+                                </a>
+                            </li>
+                        {% endfor %}
+
+                        {% if page < totalPages %}
+                            <li>
+                                <a href="{{ path('mautic_aspectfile_batch_index', {'page': page + 1}) }}" data-toggle="ajax">
+                                    <i class="fa fa-angle-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

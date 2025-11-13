@@ -1,0 +1,201 @@
+{% extends '@MauticCore/Default/content.html.twig' %}
+
+{% block headerTitle %}
+    {{ 'mautic.aspectfile.batch.header.view'|trans({'%id%': batch.id}) }}
+{% endblock %}
+
+{% block actions %}
+    <div class="btn-group">
+        <a href="{{ path('mautic_aspectfile_batch_index') }}"
+           class="btn btn-default btn-sm"
+           data-toggle="ajax">
+            <i class="fa fa-arrow-left"></i> {{ 'mautic.core.back'|trans }}
+        </a>
+        {% if batch.status in ['FAILED', 'PENDING'] %}
+            <a href="{{ path('mautic_aspectfile_batch_reprocess', {'id': batch.id}) }}"
+               class="btn btn-warning btn-sm"
+               data-toggle="ajax"
+               data-method="POST">
+                <i class="fa fa-refresh"></i> {{ 'mautic.aspectfile.batch.reprocess'|trans }}
+            </a>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="pa-md">
+    {# Batch Information #}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">{{ 'mautic.aspectfile.batch.info'|trans }}</h3>
+        </div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <dl class="dl-horizontal">
+                        <dt>{{ 'mautic.core.id'|trans }}:</dt>
+                        <dd>#{{ batch.id }}</dd>
+
+                        <dt>{{ 'mautic.core.status'|trans }}:</dt>
+                        <dd>
+                            {% if batch.status == 'PENDING' %}
+                                <span class="label label-warning">{{ 'mautic.aspectfile.batch.status.pending'|trans }}</span>
+                            {% elseif batch.status == 'GENERATING' %}
+                                <span class="label label-info">{{ 'mautic.aspectfile.batch.status.generating'|trans }}</span>
+                            {% elseif batch.status == 'UPLOADING' %}
+                                <span class="label label-info">{{ 'mautic.aspectfile.batch.status.uploading'|trans }}</span>
+                            {% elseif batch.status == 'UPLOADED' %}
+                                <span class="label label-success">{{ 'mautic.aspectfile.batch.status.uploaded'|trans }}</span>
+                            {% elseif batch.status == 'FAILED' %}
+                                <span class="label label-danger">{{ 'mautic.aspectfile.batch.status.failed'|trans }}</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>{{ 'mautic.aspectfile.schema'|trans }}:</dt>
+                        <dd>{{ batch.schema.name }}</dd>
+
+                        <dt>{{ 'mautic.campaign.campaign'|trans }}:</dt>
+                        <dd>Campaign #{{ batch.campaignId }}</dd>
+
+                        <dt>{{ 'mautic.aspectfile.event'|trans }}:</dt>
+                        <dd>Event #{{ batch.eventId }}</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl class="dl-horizontal">
+                        <dt>{{ 'mautic.aspectfile.bucket'|trans }}:</dt>
+                        <dd><code>{{ batch.bucketName }}</code></dd>
+
+                        <dt>{{ 'mautic.aspectfile.file.name'|trans }}:</dt>
+                        <dd>
+                            {% if batch.fileName %}
+                                <i class="fa fa-file-text"></i> {{ batch.fileName }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>{{ 'mautic.aspectfile.file.path'|trans }}:</dt>
+                        <dd>
+                            {% if batch.filePath %}
+                                <code>{{ batch.filePath }}</code>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>{{ 'mautic.aspectfile.file.size'|trans }}:</dt>
+                        <dd>
+                            {% if batch.fileSizeBytes %}
+                                {{ (batch.fileSizeBytes / 1024)|number_format(2) }} KB
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>{{ 'mautic.core.date.added'|trans }}:</dt>
+                        <dd>{{ batch.createdAt|date('Y-m-d H:i:s') }}</dd>
+
+                        {% if batch.generatedAt %}
+                            <dt>{{ 'mautic.aspectfile.date.generated'|trans }}:</dt>
+                            <dd>{{ batch.generatedAt|date('Y-m-d H:i:s') }}</dd>
+                        {% endif %}
+
+                        {% if batch.uploadedAt %}
+                            <dt>{{ 'mautic.aspectfile.date.uploaded'|trans }}:</dt>
+                            <dd>{{ batch.uploadedAt|date('Y-m-d H:i:s') }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            {% if batch.errorMessage %}
+                <div class="alert alert-danger mt-3">
+                    <h4><i class="fa fa-exclamation-triangle"></i> {{ 'mautic.core.error'|trans }}</h4>
+                    <pre>{{ batch.errorMessage }}</pre>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Statistics #}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">{{ 'mautic.aspectfile.batch.statistics'|trans }}</h3>
+        </div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3 text-center">
+                    <h3>{{ statistics.total }}</h3>
+                    <p class="text-muted">{{ 'mautic.aspectfile.leads.total'|trans }}</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h3 class="text-warning">{{ statistics.pending }}</h3>
+                    <p class="text-muted">{{ 'mautic.aspectfile.leads.pending'|trans }}</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h3 class="text-success">{{ statistics.generated }}</h3>
+                    <p class="text-muted">{{ 'mautic.aspectfile.leads.generated'|trans }}</p>
+                </div>
+                <div class="col-md-3 text-center">
+                    <h3 class="text-danger">{{ statistics.failed }}</h3>
+                    <p class="text-muted">{{ 'mautic.aspectfile.leads.failed'|trans }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Leads List #}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">{{ 'mautic.aspectfile.batch.leads'|trans }}</h3>
+        </div>
+        <div class="panel-body">
+            {% if leads|length == 0 %}
+                <div class="alert alert-info">
+                    <i class="fa fa-info-circle"></i> {{ 'mautic.aspectfile.batch.leads.none'|trans }}
+                </div>
+            {% else %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th>{{ 'mautic.core.id'|trans }}</th>
+                                <th>{{ 'mautic.lead.lead'|trans }}</th>
+                                <th>{{ 'mautic.core.email'|trans }}</th>
+                                <th>{{ 'mautic.core.status'|trans }}</th>
+                                <th>{{ 'mautic.core.date.added'|trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for batchLead in leads %}
+                                {% set lead = batchLead.lead %}
+                                <tr>
+                                    <td>#{{ lead.id }}</td>
+                                    <td>
+                                        <a href="{{ path('mautic_contact_action', {'objectAction': 'view', 'objectId': lead.id}) }}"
+                                           target="_blank">
+                                            {{ lead.firstname }} {{ lead.lastname }}
+                                        </a>
+                                    </td>
+                                    <td>{{ lead.email }}</td>
+                                    <td>
+                                        {% if batchLead.status == 'PENDING' %}
+                                            <span class="label label-warning">{{ 'mautic.aspectfile.lead.status.pending'|trans }}</span>
+                                        {% elseif batchLead.status == 'GENERATED' %}
+                                            <span class="label label-success">{{ 'mautic.aspectfile.lead.status.generated'|trans }}</span>
+                                        {% elseif batchLead.status == 'FAILED' %}
+                                            <span class="label label-danger">{{ 'mautic.aspectfile.lead.status.failed'|trans }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ batchLead.createdAt|date('Y-m-d H:i:s') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
