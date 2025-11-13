@@ -53,18 +53,4 @@ class Version_1_0_5 extends AbstractMigration
             $this->addSql("ALTER TABLE {$schemasTable} DROP COLUMN network_path");
         }
     }
-
-    /**
-     * Check if a table has a specific column
-     */
-    private function hasColumn(string $tableName, string $columnName): bool
-    {
-        try {
-            $schema = $this->connection->createSchemaManager()->introspectSchema();
-            $table = $schema->getTable($tableName);
-            return $table->hasColumn($columnName);
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
 }
