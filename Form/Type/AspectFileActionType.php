@@ -55,15 +55,48 @@ class AspectFileActionType extends AbstractType
         );
 
         $builder->add(
+            'destination_type',
+            ChoiceType::class,
+            [
+                'label' => 'mautic.aspectfile.action.destination_type',
+                'required' => true,
+                'choices' => [
+                    'mautic.aspectfile.action.destination.s3' => 'S3',
+                    'mautic.aspectfile.action.destination.network' => 'NETWORK',
+                ],
+                'empty_data' => 'S3',
+                'attr' => [
+                    'class' => 'form-control',
+                    'tooltip' => 'mautic.aspectfile.action.destination_type.tooltip',
+                    'onchange' => 'AspectFile.toggleDestinationFields(this.value)',
+                ],
+            ]
+        );
+
+        $builder->add(
             'bucket_name',
             TextType::class,
             [
                 'label' => 'Bucket Name',
-                'required' => true,
+                'required' => false,
                 'attr' => [
-                    'class' => 'form-control',
+                    'class' => 'form-control aspectfile-s3-field',
                     'tooltip' => 'MinIO/S3 bucket name where the file will be uploaded',
                     'placeholder' => 'my-bucket',
+                ],
+            ]
+        );
+
+        $builder->add(
+            'network_path',
+            TextType::class,
+            [
+                'label' => 'mautic.aspectfile.action.network_path',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control',
+                    'tooltip' => 'mautic.aspectfile.action.network_path.tooltip',
+                    'placeholder' => '/mnt/share/uploads or \\\\\\\\server\\\\share\\\\uploads',
                 ],
             ]
         );

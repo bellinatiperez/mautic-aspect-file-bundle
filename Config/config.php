@@ -93,6 +93,12 @@ return [
                     'doctrine.orm.entity_manager',
                 ],
             ],
+            'mautic.aspectfile.assets.subscriber' => [
+                'class' => \MauticPlugin\MauticAspectFileBundle\EventListener\AssetsSubscriber::class,
+                'arguments' => [
+                    'request_stack',
+                ],
+            ],
         ],
         'forms' => [
             'mautic.aspectfile.form.type.action' => [
@@ -136,6 +142,7 @@ return [
                     'doctrine.orm.entity_manager',
                     'mautic.aspectfile.service.file_generator',
                     'mautic.aspectfile.service.minio_uploader',
+                    'mautic.aspectfile.service.network_uploader',
                     'monolog.logger.mautic',
                     'mautic.aspectfile.service.field_mapper',
                     'mautic.lead.model.lead',
@@ -155,6 +162,10 @@ return [
                     'mautic.helper.integration',
                     'monolog.logger.mautic',
                 ],
+            ],
+            'mautic.aspectfile.service.network_uploader' => [
+                'class' => \MauticPlugin\MauticAspectFileBundle\Service\NetworkUploader::class,
+                'arguments' => ['monolog.logger.mautic'],
             ],
             'mautic.aspectfile.service.schema_parser' => [
                 'class' => \MauticPlugin\MauticAspectFileBundle\Service\SchemaParser::class,

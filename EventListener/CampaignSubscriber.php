@@ -76,15 +76,29 @@ class CampaignSubscriber implements EventSubscriberInterface
         $schemaId = (int) ($config['schema_id'] ?? 0);
         $bucketName = $config['bucket_name'] ?? '';
         $fileNameTemplate = $config['file_name_template'] ?? '';
+        $destinationType = $config['destination_type'] ?? 'S3';
+        $networkPath = $config['network_path'] ?? null;
 
-        if (!$schemaId || !$bucketName) {
-            $this->logger->error('AspectFile: Missing required configuration', [
-                'schema_id' => $schemaId,
-                'bucket_name' => $bucketName,
+        // Validate required fields based on destination type
+        if (!$schemaId) {
+            $this->logger->error('AspectFile: Missing schema_id', ['schema_id' => $schemaId]);
+            $event->failAll('Missing schema_id configuration');
+            return;
+        }
+
+        if ($destinationType === 'S3' && !$bucketName) {
+            $this->logger->error('AspectFile: Missing bucket_name for S3 destination', [
+                'destination_type' => $destinationType,
             ]);
+            $event->failAll('Missing bucket_name for S3 destination');
+            return;
+        }
 
-            $event->failAll('Missing schema_id or bucket_name configuration');
-
+        if ($destinationType === 'NETWORK' && !$networkPath) {
+            $this->logger->error('AspectFile: Missing network_path for NETWORK destination', [
+                'destination_type' => $destinationType,
+            ]);
+            $event->failAll('Missing network_path for NETWORK destination');
             return;
         }
 
@@ -122,7 +136,9 @@ class CampaignSubscriber implements EventSubscriberInterface
                 $event->getEvent()->getId(),
                 $schema,
                 $bucketName,
-                $fileNameTemplate
+                $fileNameTemplate,
+                $destinationType,
+                $networkPath
             );
 
             if ($result['success']) {

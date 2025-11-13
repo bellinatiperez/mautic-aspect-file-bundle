@@ -38,20 +38,25 @@ class AspectFileModel
     /**
      * Find or create a batch for the given campaign/event/schema combination
      */
-    private function findOrCreateBatch(int $campaignId, int $eventId, Schema $schema, string $bucketName, string $fileNameTemplate = ''): AspectFileBatch
-    {
+    private function findOrCreateBatch(
+        int $campaignId,
+        int $eventId,
+        Schema $schema,
+        string $bucketName,
+        string $fileNameTemplate = '',
+        string $destinationType = 'S3',
+        ?string $networkPath = null
+    ): AspectFileBatch {
         $batch = $this->em->createQueryBuilder()
             ->select('b')
             ->from(AspectFileBatch::class, 'b')
             ->where('b.campaignId = :campaignId')
             ->andWhere('b.eventId = :eventId')
             ->andWhere('b.schema = :schema')
-            ->andWhere('b.bucketName = :bucketName')
             ->andWhere('b.status = :status')
             ->setParameter('campaignId', $campaignId)
             ->setParameter('eventId', $eventId)
             ->setParameter('schema', $schema)
-            ->setParameter('bucketName', $bucketName)
             ->setParameter('status', AspectFileBatch::STATUS_PENDING)
             ->setMaxResults(1)
             ->getQuery()
@@ -64,6 +69,8 @@ class AspectFileModel
             $batch->setSchema($schema);
             $batch->setBucketName($bucketName);
             $batch->setFileNameTemplate($fileNameTemplate ?: null);
+            $batch->setDestinationType($destinationType);
+            $batch->setNetworkPath($networkPath);
             $batch->setStatus(AspectFileBatch::STATUS_PENDING);
         }
 
@@ -79,13 +86,31 @@ class AspectFileModel
      * @param Schema $schema
      * @param string $bucketName
      * @param string $fileNameTemplate
+     * @param string $destinationType
+     * @param string|null $networkPath
      * @return array{success: bool, batch_id?: int, error?: string}
      */
-    public function queueLead(Lead $lead, int $campaignId, int $eventId, Schema $schema, string $bucketName, string $fileNameTemplate = ''): array
-    {
+    public function queueLead(
+        Lead $lead,
+        int $campaignId,
+        int $eventId,
+        Schema $schema,
+        string $bucketName,
+        string $fileNameTemplate = '',
+        string $destinationType = 'S3',
+        ?string $networkPath = null
+    ): array {
         try {
             // Find or create batch
-            $batch = $this->findOrCreateBatch($campaignId, $eventId, $schema, $bucketName, $fileNameTemplate);
+            $batch = $this->findOrCreateBatch(
+                $campaignId,
+                $eventId,
+                $schema,
+                $bucketName,
+                $fileNameTemplate,
+                $destinationType,
+                $networkPath
+            );
 
             if (!$batch->getId()) {
                 $this->em->persist($batch);

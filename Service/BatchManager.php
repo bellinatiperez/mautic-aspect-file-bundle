@@ -18,6 +18,7 @@ class BatchManager
     private EntityManagerInterface $em;
     private FileGenerator $fileGenerator;
     private MinIOUploader $minioUploader;
+    private NetworkUploader $networkUploader;
     private LoggerInterface $logger;
     private FieldMapper $fieldMapper;
     private LeadModel $leadModel;
@@ -26,6 +27,7 @@ class BatchManager
         EntityManagerInterface $em,
         FileGenerator $fileGenerator,
         MinIOUploader $minioUploader,
+        NetworkUploader $networkUploader,
         LoggerInterface $logger,
         FieldMapper $fieldMapper,
         LeadModel $leadModel
@@ -33,6 +35,7 @@ class BatchManager
         $this->em = $em;
         $this->fileGenerator = $fileGenerator;
         $this->minioUploader = $minioUploader;
+        $this->networkUploader = $networkUploader;
         $this->logger = $logger;
         $this->fieldMapper = $fieldMapper;
         $this->leadModel = $leadModel;
@@ -193,20 +196,43 @@ class BatchManager
             $this->em->persist($batch);
             $this->em->flush();
 
-            // Upload to MinIO
+            // Get destination type from batch
+            $destinationType = $batch->getDestinationType();
+
+            // Upload based on destination type
             $this->logger->info('AspectFile: Setting batch status to UPLOADING', [
                 'batch_id' => $batchId,
+                'destination_type' => $destinationType,
             ]);
 
             $batch->setStatus(AspectFileBatch::STATUS_UPLOADING);
             $this->em->persist($batch);
             $this->em->flush();
 
-            $uploadResult = $this->minioUploader->upload(
-                $localFilePath,
-                $batch->getBucketName(),
-                $fileName
-            );
+            if ($destinationType === 'NETWORK') {
+                // Upload to network directory
+                $networkPath = $batch->getNetworkPath();
+                if (empty($networkPath)) {
+                    throw new \RuntimeException('Network path is not configured');
+                }
+
+                $uploadResult = $this->networkUploader->upload(
+                    $localFilePath,
+                    $networkPath,
+                    $fileName
+                );
+
+                $filePath = $uploadResult['path'] ?? ($networkPath . '/' . $fileName);
+            } else {
+                // Upload to S3/MinIO (default)
+                $uploadResult = $this->minioUploader->upload(
+                    $localFilePath,
+                    $batch->getBucketName(),
+                    $fileName
+                );
+
+                $filePath = $batch->getBucketName() . '/' . $fileName;
+            }
 
             if (!$uploadResult['success']) {
                 throw new \RuntimeException('Upload failed: ' . ($uploadResult['error'] ?? 'Unknown error'));
@@ -215,11 +241,12 @@ class BatchManager
             $this->logger->info('AspectFile: Setting batch status to UPLOADED', [
                 'batch_id' => $batchId,
                 'file_name' => $fileName,
+                'destination_type' => $destinationType,
             ]);
 
             $batch->setStatus(AspectFileBatch::STATUS_UPLOADED);
             $batch->setFileName($fileName);
-            $batch->setFilePath($batch->getBucketName() . '/' . $fileName);
+            $batch->setFilePath($filePath);
             $batch->setUploadedAt(new \DateTime());
             $this->em->persist($batch);
             $this->em->flush();

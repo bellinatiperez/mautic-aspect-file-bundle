@@ -93,6 +93,16 @@ class AspectFileBatch
     private ?string $errorMessage = null;
 
     /**
+     * @ORM\Column(type="string", length=20)
+     */
+    private string $destinationType = 'S3';
+
+    /**
+     * @ORM\Column(type="string", length=500, nullable=true)
+     */
+    private ?string $networkPath = null;
+
+    /**
      * @ORM\Column(type="datetime")
      */
     private \DateTime $createdAt;
@@ -170,6 +180,17 @@ class AspectFileBatch
 
         $builder->createField('errorMessage', 'text')
             ->columnName('error_message')
+            ->nullable()
+            ->build();
+
+        $builder->createField('destinationType', 'string')
+            ->columnName('destination_type')
+            ->length(20)
+            ->build();
+
+        $builder->createField('networkPath', 'string')
+            ->columnName('network_path')
+            ->length(500)
             ->nullable()
             ->build();
 
@@ -343,6 +364,30 @@ class AspectFileBatch
     public function setErrorMessage(?string $errorMessage): self
     {
         $this->errorMessage = $errorMessage;
+
+        return $this;
+    }
+
+    public function getDestinationType(): string
+    {
+        return $this->destinationType;
+    }
+
+    public function setDestinationType(string $destinationType): self
+    {
+        $this->destinationType = $destinationType;
+
+        return $this;
+    }
+
+    public function getNetworkPath(): ?string
+    {
+        return $this->networkPath;
+    }
+
+    public function setNetworkPath(?string $networkPath): self
+    {
+        $this->networkPath = $networkPath;
 
         return $this;
     }
