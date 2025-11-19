@@ -10,7 +10,9 @@ use Mautic\CampaignBundle\Event\CampaignBuilderEvent;
 use Mautic\CampaignBundle\Event\PendingEvent;
 use MauticPlugin\MauticAspectFileBundle\Entity\Schema;
 use MauticPlugin\MauticAspectFileBundle\Form\Type\AspectFileActionType;
+use MauticPlugin\MauticAspectFileBundle\Form\Type\FastPathActionType;
 use MauticPlugin\MauticAspectFileBundle\Model\AspectFileModel;
+use MauticPlugin\MauticAspectFileBundle\Service\FastPathSender;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -22,15 +24,18 @@ class CampaignSubscriber implements EventSubscriberInterface
     private AspectFileModel $aspectFileModel;
     private LoggerInterface $logger;
     private EntityManagerInterface $entityManager;
+    private FastPathSender $fastPathSender;
 
     public function __construct(
         AspectFileModel $aspectFileModel,
         LoggerInterface $logger,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $entityManager,
+        FastPathSender $fastPathSender
     ) {
         $this->aspectFileModel = $aspectFileModel;
         $this->logger = $logger;
         $this->entityManager = $entityManager;
+        $this->fastPathSender = $fastPathSender;
     }
 
     public static function getSubscribedEvents(): array
@@ -38,6 +43,7 @@ class CampaignSubscriber implements EventSubscriberInterface
         return [
             CampaignEvents::CAMPAIGN_ON_BUILD => ['onCampaignBuild', 0],
             'mautic.aspectfile.on_campaign_trigger_action' => ['onCampaignTriggerAction', 0],
+            'mautic.fastpath.on_campaign_trigger_action' => ['onFastPathTriggerAction', 0],
         ];
     }
 
@@ -46,7 +52,7 @@ class CampaignSubscriber implements EventSubscriberInterface
      */
     public function onCampaignBuild(CampaignBuilderEvent $event): void
     {
-        // Register Generate Aspect File action
+        // Register Generate Aspect File action (batch processing)
         $event->addAction(
             'aspectfile.generate',
             [
@@ -55,6 +61,19 @@ class CampaignSubscriber implements EventSubscriberInterface
                 'batchEventName' => 'mautic.aspectfile.on_campaign_trigger_action',
                 'formType' => AspectFileActionType::class,
                 'channel' => 'aspectfile',
+                'channelIdField' => 'schema_id',
+            ]
+        );
+
+        // Register Send to FastPath action (individual processing)
+        $event->addAction(
+            'fastpath.send_individual',
+            [
+                'label' => 'Send to FastPath (Individual)',
+                'description' => 'Send lead data individually to FastPath SOAP service',
+                'eventName' => 'mautic.fastpath.on_campaign_trigger_action',
+                'formType' => FastPathActionType::class,
+                'channel' => 'fastpath',
                 'channelIdField' => 'schema_id',
             ]
         );
@@ -157,6 +176,84 @@ class CampaignSubscriber implements EventSubscriberInterface
                 ]);
 
                 $event->fail($log, $result['error'] ?? 'Failed to queue lead');
+            }
+        }
+    }
+
+    /**
+     * Execute FastPath action when triggered in campaign (individual processing)
+     */
+    public function onFastPathTriggerAction(PendingEvent $event): void
+    {
+        $config = $event->getEvent()->getProperties();
+
+        $this->logger->info('FastPath: Campaign action triggered', [
+            'campaign_id' => $event->getEvent()->getCampaign()->getId(),
+            'campaign_name' => $event->getEvent()->getCampaign()->getName(),
+        ]);
+
+        // Get configuration
+        $schemaId = (int) ($config['schema_id'] ?? 0);
+        $wsdlUrl = $config['wsdl_url'] ?? 'http://bpctaasp1alme.bp.local:8000/FastPathService?wsdl';
+        $fastList = $config['fast_list'] ?? '';
+        $functionType = (int) ($config['function_type'] ?? 1);
+
+        // Validate required fields
+        if (!$schemaId) {
+            $this->logger->error('FastPath: Missing schema_id', ['schema_id' => $schemaId]);
+            $event->failAll('Missing schema_id configuration');
+            return;
+        }
+
+        if (!$fastList) {
+            $this->logger->error('FastPath: Missing fast_list', ['fast_list' => $fastList]);
+            $event->failAll('Missing fast_list configuration');
+            return;
+        }
+
+        // Get schema entity from database
+        $schema = $this->entityManager->getRepository(Schema::class)->find($schemaId);
+
+        if (!$schema) {
+            $this->logger->error('FastPath: Schema not found', [
+                'schema_id' => $schemaId,
+            ]);
+
+            $event->passAllWithError("Schema not found: {$schemaId}");
+            return;
+        }
+
+        // Process each log entry (each contact) individually
+        $logs = $event->getPending();
+        $this->logger->info('FastPath: Processing logs individually', ['count' => $logs->count()]);
+
+        foreach ($logs as $log) {
+            $lead = $log->getLead();
+
+            $this->logger->info('FastPath: Processing lead', [
+                'lead_id' => $lead->getId(),
+                'log_id' => $log->getId(),
+            ]);
+
+            // Send lead data to FastPath SOAP service
+            $result = $this->fastPathSender->send($lead, $schema, $config);
+
+            if ($result['success']) {
+                $this->logger->info('FastPath: Lead sent successfully', [
+                    'lead_id' => $lead->getId(),
+                    'message_id' => $result['message_id'] ?? null,
+                ]);
+
+                $log->setIsScheduled(false);
+                $log->setDateTriggered(new \DateTime());
+                $event->pass($log);
+            } else {
+                $this->logger->error('FastPath: Failed to send lead', [
+                    'lead_id' => $lead->getId(),
+                    'error' => $result['error'] ?? 'Unknown error',
+                ]);
+
+                $event->fail($log, $result['error'] ?? 'Failed to send lead to FastPath');
             }
         }
     }

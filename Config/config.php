@@ -91,6 +91,7 @@ return [
                     'mautic.aspectfile.model.aspectfile',
                     'monolog.logger.mautic',
                     'doctrine.orm.entity_manager',
+                    'mautic.aspectfile.service.fastpath_sender',
                 ],
             ],
             'mautic.aspectfile.assets.subscriber' => [
@@ -105,6 +106,11 @@ return [
                 'class' => \MauticPlugin\MauticAspectFileBundle\Form\Type\AspectFileActionType::class,
                 'arguments' => ['doctrine.orm.entity_manager'],
                 'alias' => 'aspectfile_action',
+            ],
+            'mautic.aspectfile.form.type.fastpath_action' => [
+                'class' => \MauticPlugin\MauticAspectFileBundle\Form\Type\FastPathActionType::class,
+                'arguments' => ['doctrine.orm.entity_manager'],
+                'alias' => 'fastpath_action',
             ],
             'mautic.aspectfile.form.type.schema' => [
                 'class' => \MauticPlugin\MauticAspectFileBundle\Form\Type\SchemaType::class,
@@ -170,6 +176,14 @@ return [
             'mautic.aspectfile.service.schema_parser' => [
                 'class' => \MauticPlugin\MauticAspectFileBundle\Service\SchemaParser::class,
                 'arguments' => ['monolog.logger.mautic'],
+            ],
+            'mautic.aspectfile.service.fastpath_sender' => [
+                'class' => \MauticPlugin\MauticAspectFileBundle\Service\FastPathSender::class,
+                'arguments' => [
+                    'monolog.logger.mautic',
+                    'mautic.aspectfile.service.field_mapper',
+                    'mautic.aspectfile.service.file_generator',
+                ],
             ],
         ],
         'controllers' => [
