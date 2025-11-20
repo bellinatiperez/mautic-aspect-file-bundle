@@ -21,8 +21,19 @@
         <div class="alert alert-info">
             <h4>Excel File Requirements:</h4>
             <ul>
-                <li>First row must contain headers: <strong>No, Name, Data Type, Access Type, Offset, Length</strong></li>
-                <li>Start from row 2 for data</li>
+                <li><strong>Fixed Column Positions (A-F):</strong>
+                    <ul>
+                        <li>Column A: <strong>No.</strong> (Field number)</li>
+                        <li>Column B: <strong>Name</strong> (Field name)</li>
+                        <li>Column C: <strong>Data Type</strong> (STRING, INTEGER, etc.)</li>
+                        <li>Column D: <strong>Access Type</strong> (READ-WRITE, READ-ONLY, etc.)</li>
+                        <li>Column E: <strong>Offset</strong> (Start position)</li>
+                        <li>Column F: <strong>Length</strong> (Field length)</li>
+                    </ul>
+                </li>
+                <li>First row must contain headers (row 1)</li>
+                <li>Data starts from row 2</li>
+                <li>Additional columns (G, H, I, etc.) are ignored</li>
                 <li>File format: .xlsx or .xls</li>
             </ul>
         </div>

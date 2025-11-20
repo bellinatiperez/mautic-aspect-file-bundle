@@ -155,50 +155,39 @@ class SchemaParser
     /**
      * Map column headers to Excel column letters
      *
+     * Fixed mapping: A=No, B=Name, C=DataType, D=AccessType, E=Offset, F=Length
+     *
      * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet
      * @param int $headerRow
      * @return array<string, string>
      */
     private function mapColumns($worksheet, int $headerRow): array
     {
-        // Default mapping based on typical layout
+        // FIXED mapping - always use columns A through F
+        // These are the determinant columns for AspectFile and FastPath schemas
         $map = [
-            'no' => 'A',
-            'name' => 'B',
-            'data_type' => 'C',
-            'access_type' => 'D',
-            'offset' => 'E',
-            'length' => 'F',
+            'no' => 'A',           // Column A: No. / Number
+            'name' => 'B',         // Column B: Name / Field Name
+            'data_type' => 'C',    // Column C: Data Type
+            'access_type' => 'D',  // Column D: Access Type
+            'offset' => 'E',       // Column E: Offset / Start Position
+            'length' => 'F',       // Column F: Length / Field Length
         ];
 
-        // Try to auto-detect columns based on header names
+        // Log header names for debugging
         $headerNames = [];
-        for ($col = 'A'; $col <= 'Z'; ++$col) {
+        for ($col = 'A'; $col <= 'F'; ++$col) {
             $cellValue = $worksheet->getCell($col . $headerRow)->getValue();
-            $value = strtolower(trim((string) $cellValue));
+            $value = trim((string) $cellValue);
             if (!empty($value)) {
                 $headerNames[$col] = $value;
             }
         }
 
-        $this->logger->info('AspectFile: Header names found', $headerNames);
-
-        // Map common variations
-        foreach ($headerNames as $col => $name) {
-            if (str_contains($name, 'no.') || str_contains($name, 'no') || $name === '#') {
-                $map['no'] = $col;
-            } elseif (str_contains($name, 'name') || str_contains($name, 'nome') || str_contains($name, 'campo')) {
-                $map['name'] = $col;
-            } elseif (str_contains($name, 'data type') || str_contains($name, 'tipo')) {
-                $map['data_type'] = $col;
-            } elseif (str_contains($name, 'access') || str_contains($name, 'acesso')) {
-                $map['access_type'] = $col;
-            } elseif (str_contains($name, 'offset') || str_contains($name, 'position') || str_contains($name, 'posição') || str_contains($name, 'inicio')) {
-                $map['offset'] = $col;
-            } elseif (str_contains($name, 'length') || str_contains($name, 'tamanho') || str_contains($name, 'size')) {
-                $map['length'] = $col;
-            }
-        }
+        $this->logger->info('AspectFile: Using FIXED column mapping (A-F)', [
+            'mapping' => $map,
+            'headers_found' => $headerNames,
+        ]);
 
         return $map;
     }
