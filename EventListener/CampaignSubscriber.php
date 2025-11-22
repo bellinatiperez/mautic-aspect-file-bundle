@@ -7,6 +7,7 @@ namespace MauticPlugin\MauticAspectFileBundle\EventListener;
 use Doctrine\ORM\EntityManagerInterface;
 use Mautic\CampaignBundle\CampaignEvents;
 use Mautic\CampaignBundle\Event\CampaignBuilderEvent;
+use Mautic\CampaignBundle\Event\CampaignExecutionEvent;
 use Mautic\CampaignBundle\Event\PendingEvent;
 use MauticPlugin\MauticAspectFileBundle\Entity\Schema;
 use MauticPlugin\MauticAspectFileBundle\Form\Type\AspectFileActionType;
@@ -183,13 +184,15 @@ class CampaignSubscriber implements EventSubscriberInterface
     /**
      * Execute FastPath action when triggered in campaign (individual processing)
      */
-    public function onFastPathTriggerAction(PendingEvent $event): void
+    public function onFastPathTriggerAction(CampaignExecutionEvent $event): void
     {
-        $config = $event->getEvent()->getProperties();
+        $config = $event->getConfig();
+        $lead = $event->getLead();
+        $log = $event->getLogEntry();
 
         $this->logger->info('FastPath: Campaign action triggered', [
-            'campaign_id' => $event->getEvent()->getCampaign()->getId(),
-            'campaign_name' => $event->getEvent()->getCampaign()->getName(),
+            'lead_id' => $lead->getId(),
+            'log_id' => $log ? $log->getId() : null,
         ]);
 
         // Get configuration
@@ -201,13 +204,13 @@ class CampaignSubscriber implements EventSubscriberInterface
         // Validate required fields
         if (!$schemaId) {
             $this->logger->error('FastPath: Missing schema_id', ['schema_id' => $schemaId]);
-            $event->failAll('Missing schema_id configuration');
+            $event->setFailed('Missing schema_id configuration');
             return;
         }
 
         if (!$fastList) {
             $this->logger->error('FastPath: Missing fast_list', ['fast_list' => $fastList]);
-            $event->failAll('Missing fast_list configuration');
+            $event->setFailed('Missing fast_list configuration');
             return;
         }
 
@@ -219,42 +222,34 @@ class CampaignSubscriber implements EventSubscriberInterface
                 'schema_id' => $schemaId,
             ]);
 
-            $event->passAllWithError("Schema not found: {$schemaId}");
+            $event->setFailed("Schema not found: {$schemaId}");
             return;
         }
 
-        // Process each log entry (each contact) individually
-        $logs = $event->getPending();
-        $this->logger->info('FastPath: Processing logs individually', ['count' => $logs->count()]);
+        // Send lead data to FastPath SOAP service
+        $result = $this->fastPathSender->send($lead, $schema, $config);
 
-        foreach ($logs as $log) {
-            $lead = $log->getLead();
-
-            $this->logger->info('FastPath: Processing lead', [
+        if ($result['success']) {
+            $this->logger->info('FastPath: Lead sent successfully', [
                 'lead_id' => $lead->getId(),
-                'log_id' => $log->getId(),
+                'message_id' => $result['message_id'] ?? null,
             ]);
 
-            // Send lead data to FastPath SOAP service
-            $result = $this->fastPathSender->send($lead, $schema, $config);
+            // Set success result
+            $event->setResult(true);
 
-            if ($result['success']) {
-                $this->logger->info('FastPath: Lead sent successfully', [
-                    'lead_id' => $lead->getId(),
-                    'message_id' => $result['message_id'] ?? null,
-                ]);
-
+            // Update log entry if available
+            if ($log) {
                 $log->setIsScheduled(false);
                 $log->setDateTriggered(new \DateTime());
-                $event->pass($log);
-            } else {
-                $this->logger->error('FastPath: Failed to send lead', [
-                    'lead_id' => $lead->getId(),
-                    'error' => $result['error'] ?? 'Unknown error',
-                ]);
-
-                $event->fail($log, $result['error'] ?? 'Failed to send lead to FastPath');
             }
+        } else {
+            $this->logger->error('FastPath: Failed to send lead', [
+                'lead_id' => $lead->getId(),
+                'error' => $result['error'] ?? 'Unknown error',
+            ]);
+
+            $event->setFailed($result['error'] ?? 'Failed to send lead to FastPath');
         }
     }
 }

@@ -42,32 +42,37 @@ class FieldMapper
             // Get value from lead
             $value = '';
 
-            // Try different methods to get the value
-            try {
-                // Method 1: Try getter method first (works for core fields like firstname, lastname, email)
-                $getter = 'get' . str_replace('_', '', ucwords($leadField, '_'));
-                if (method_exists($lead, $getter)) {
-                    $value = $lead->$getter();
-                }
+            // Handle computed/special fields first
+            $value = $this->getComputedFieldValue($lead, $leadField);
 
-                // Method 2: If empty, try getFieldValue (works for custom fields)
-                if (null === $value || '' === $value) {
-                    $value = $lead->getFieldValue($leadField);
-                }
-
-                // Method 3: If still empty, try direct property access via getFields()
-                if (null === $value || '' === $value) {
-                    $allFields = $lead->getFields();
-                    if (isset($allFields['all'][$leadField])) {
-                        $value = $allFields['all'][$leadField];
+            // If not a computed field, try standard methods
+            if (null === $value || '' === $value) {
+                try {
+                    // Method 1: Try getter method first (works for core fields like firstname, lastname, email)
+                    $getter = 'get' . str_replace('_', '', ucwords($leadField, '_'));
+                    if (method_exists($lead, $getter)) {
+                        $value = $lead->$getter();
                     }
+
+                    // Method 2: If empty, try getFieldValue (works for custom fields)
+                    if (null === $value || '' === $value) {
+                        $value = $lead->getFieldValue($leadField);
+                    }
+
+                    // Method 3: If still empty, try direct property access via getFields()
+                    if (null === $value || '' === $value) {
+                        $allFields = $lead->getFields();
+                        if (isset($allFields['all'][$leadField])) {
+                            $value = $allFields['all'][$leadField];
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $this->logger->warning('AspectFile: Failed to get lead field value', [
+                        'lead_id' => $lead->getId(),
+                        'field' => $leadField,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
-            } catch (\Exception $e) {
-                $this->logger->warning('AspectFile: Failed to get lead field value', [
-                    'lead_id' => $lead->getId(),
-                    'field' => $leadField,
-                    'error' => $e->getMessage(),
-                ]);
             }
 
             // Convert to string and handle arrays
@@ -81,5 +86,36 @@ class FieldMapper
         }
 
         return $mappedData;
+    }
+
+    /**
+     * Get value for computed/special fields that don't exist as database columns
+     *
+     * @param Lead $lead
+     * @param string $fieldName
+     * @return string|null
+     */
+    private function getComputedFieldValue(Lead $lead, string $fieldName): ?string
+    {
+        switch (strtolower($fieldName)) {
+            case 'fullname':
+            case 'full_name':
+                // Compute fullname from firstname + lastname
+                $firstname = $lead->getFirstname() ?? '';
+                $lastname = $lead->getLastname() ?? '';
+                $fullname = trim($firstname . ' ' . $lastname);
+                return $fullname !== '' ? $fullname : null;
+
+            case 'name':
+                // Alias for fullname
+                $firstname = $lead->getFirstname() ?? '';
+                $lastname = $lead->getLastname() ?? '';
+                $name = trim($firstname . ' ' . $lastname);
+                return $name !== '' ? $name : null;
+
+            default:
+                // Not a computed field
+                return null;
+        }
     }
 }
