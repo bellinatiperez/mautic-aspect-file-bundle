@@ -82,8 +82,8 @@ class FastPathSender
                 'trace' => 1,
                 'exceptions' => true,
                 'connection_timeout' => $timeout,
-                'cache_wsdl' => WSDL_CACHE_NONE, // Disable cache for development
-                'soap_version' => SOAP_1_1,
+                'cache_wsdl' => \WSDL_CACHE_NONE, // Disable cache for development
+                'soap_version' => \SOAP_1_1,
             ];
 
             $client = new SoapClient($wsdlUrl, $soapOptions);
