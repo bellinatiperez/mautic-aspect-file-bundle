@@ -27,10 +27,14 @@ class Version_1_0_4 extends AbstractMigration
     {
         $table = $this->concatPrefix('aspect_file_schemas');
 
-        // Add destination_type column
-        $this->addSql("ALTER TABLE {$table} ADD destination_type VARCHAR(20) NOT NULL DEFAULT 'S3'");
+        // Add destination_type column if not exists
+        if (!$this->hasColumn($table, 'destination_type')) {
+            $this->addSql("ALTER TABLE {$table} ADD destination_type VARCHAR(20) NOT NULL DEFAULT 'S3'");
+        }
 
-        // Add network_path column
-        $this->addSql("ALTER TABLE {$table} ADD network_path VARCHAR(500) NULL DEFAULT NULL");
+        // Add network_path column if not exists
+        if (!$this->hasColumn($table, 'network_path')) {
+            $this->addSql("ALTER TABLE {$table} ADD network_path VARCHAR(500) NULL DEFAULT NULL");
+        }
     }
 }
