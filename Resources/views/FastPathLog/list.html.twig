@@ -1,0 +1,227 @@
+{% extends '@MauticCore/Default/content.html.twig' %}
+
+{% block headerTitle %}{{ 'mautic.fastpath.log.header.index'|trans }}{% endblock %}
+
+{% block actions %}
+    <div class="btn-group">
+        <a href="{{ path('mautic_fastpath_log_export', {'days': 7}) }}"
+           class="btn btn-default btn-sm"
+           title="{{ 'mautic.fastpath.log.export'|trans }}">
+            <i class="fa fa-download"></i> {{ 'mautic.fastpath.log.export'|trans }}
+        </a>
+        <a href="{{ path('mautic_fastpath_log_clear', {'days': 30}) }}"
+           class="btn btn-danger btn-sm"
+           data-toggle="ajax"
+           data-method="POST"
+           onclick="return confirm('{{ 'mautic.fastpath.log.clear.confirm'|trans }}');"
+           title="{{ 'mautic.fastpath.log.clear'|trans }}">
+            <i class="fa fa-trash"></i> {{ 'mautic.fastpath.log.clear'|trans }}
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="pa-md">
+    {# Statistics Cards #}
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-body text-center">
+                    <h2>{{ statistics.total }}</h2>
+                    <p class="text-muted mb-0">{{ 'mautic.fastpath.log.total'|trans }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-body text-center">
+                    <h2 class="text-success">{{ statistics.success }}</h2>
+                    <p class="text-muted mb-0">{{ 'mautic.fastpath.log.success'|trans }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-body text-center">
+                    <h2 class="text-danger">{{ statistics.failed }}</h2>
+                    <p class="text-muted mb-0">{{ 'mautic.fastpath.log.failed'|trans }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Filters #}
+    <div class="panel panel-default mb-3">
+        <div class="panel-body">
+            <form method="get" action="{{ path('mautic_fastpath_log_index') }}" class="form-inline">
+                <div class="form-group mr-2">
+                    <label class="sr-only">{{ 'mautic.core.status'|trans }}</label>
+                    <select name="status" class="form-control">
+                        <option value="">{{ 'mautic.fastpath.log.filter.all_status'|trans }}</option>
+                        <option value="SUCCESS" {% if statusFilter == 'SUCCESS' %}selected{% endif %}>
+                            {{ 'mautic.fastpath.log.status.success'|trans }}
+                        </option>
+                        <option value="FAILED" {% if statusFilter == 'FAILED' %}selected{% endif %}>
+                            {{ 'mautic.fastpath.log.status.failed'|trans }}
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group mr-2">
+                    <label class="sr-only">{{ 'mautic.fastpath.log.search'|trans }}</label>
+                    <input type="text" name="search" class="form-control"
+                           placeholder="{{ 'mautic.fastpath.log.search.placeholder'|trans }}"
+                           value="{{ searchFilter }}">
+                </div>
+                <button type="submit" class="btn btn-default">
+                    <i class="fa fa-search"></i> {{ 'mautic.core.search'|trans }}
+                </button>
+                {% if statusFilter or searchFilter %}
+                    <a href="{{ path('mautic_fastpath_log_index') }}" class="btn btn-link">
+                        {{ 'mautic.core.reset'|trans }}
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    {# Logs Table #}
+    <div class="panel panel-default">
+        <div class="panel-body">
+            {% if logs|length == 0 %}
+                <div class="alert alert-info">
+                    <i class="fa fa-info-circle"></i> {{ 'mautic.fastpath.log.none'|trans }}
+                </div>
+            {% else %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered">
+                        <thead>
+                            <tr>
+                                <th class="col-log-id">{{ 'mautic.core.id'|trans }}</th>
+                                <th class="col-log-status">{{ 'mautic.core.status'|trans }}</th>
+                                <th class="col-log-environment">{{ 'mautic.fastpath.log.environment'|trans }}</th>
+                                <th class="col-log-messageid">{{ 'mautic.fastpath.log.messageid'|trans }}</th>
+                                <th class="col-log-fastlist">{{ 'mautic.fastpath.log.fastlist'|trans }}</th>
+                                <th class="col-log-lead">{{ 'mautic.lead.lead'|trans }}</th>
+                                <th class="col-log-duration">{{ 'mautic.fastpath.log.duration'|trans }}</th>
+                                <th class="col-log-created">{{ 'mautic.core.date.added'|trans }}</th>
+                                <th class="col-log-actions">{{ 'mautic.core.actions'|trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ path('mautic_fastpath_log_view', {'id': log.id}) }}" data-toggle="ajax">
+                                            #{{ log.id }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if log.status == 'SUCCESS' %}
+                                            <span class="label label-success">
+                                                <i class="fa fa-check"></i> {{ 'mautic.fastpath.log.status.success'|trans }}
+                                            </span>
+                                        {% else %}
+                                            <span class="label label-danger">
+                                                <i class="fa fa-times"></i> {{ 'mautic.fastpath.log.status.failed'|trans }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-default" title="{{ log.wsdlUrl }}">
+                                            {{ log.environment }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <code class="small">{{ log.messageId }}</code>
+                                    </td>
+                                    <td>
+                                        {{ log.fastList }}
+                                    </td>
+                                    <td>
+                                        {% if log.lead %}
+                                            <a href="{{ path('mautic_contact_action', {'objectAction': 'view', 'objectId': log.lead.id}) }}"
+                                               target="_blank">
+                                                {{ log.lead.email|default('Lead #' ~ log.lead.id) }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.durationMs %}
+                                            {{ log.durationMs }} ms
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span title="{{ log.createdAt|date('Y-m-d H:i:s') }}">
+                                            {{ log.createdAt|date('Y-m-d H:i') }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ path('mautic_fastpath_log_view', {'id': log.id}) }}"
+                                               class="btn btn-default btn-xs"
+                                               data-toggle="ajax"
+                                               title="{{ 'mautic.core.form.view'|trans }}">
+                                                <i class="fa fa-eye"></i>
+                                            </a>
+                                            <a href="{{ path('mautic_fastpath_log_delete', {'id': log.id}) }}"
+                                               class="btn btn-danger btn-xs"
+                                               data-toggle="ajax"
+                                               data-method="DELETE"
+                                               onclick="return confirm('{{ 'mautic.core.form.confirmbatchdelete'|trans }}');"
+                                               title="{{ 'mautic.core.form.delete'|trans }}">
+                                                <i class="fa fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {# Pagination #}
+                {% if totalPages > 1 %}
+                    <div class="text-center">
+                        <ul class="pagination">
+                            {% if page > 1 %}
+                                <li>
+                                    <a href="{{ path('mautic_fastpath_log_index', {'page': page - 1, 'status': statusFilter, 'search': searchFilter}) }}" data-toggle="ajax">
+                                        <i class="fa fa-angle-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for p in 1..totalPages %}
+                                {% if p <= 3 or p > totalPages - 3 or (p >= page - 2 and p <= page + 2) %}
+                                    <li {% if p == page %}class="active"{% endif %}>
+                                        <a href="{{ path('mautic_fastpath_log_index', {'page': p, 'status': statusFilter, 'search': searchFilter}) }}" data-toggle="ajax">
+                                            {{ p }}
+                                        </a>
+                                    </li>
+                                {% elseif p == 4 or p == totalPages - 3 %}
+                                    <li class="disabled"><span>...</span></li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page < totalPages %}
+                                <li>
+                                    <a href="{{ path('mautic_fastpath_log_index', {'page': page + 1, 'status': statusFilter, 'search': searchFilter}) }}" data-toggle="ajax">
+                                        <i class="fa fa-angle-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                        <p class="text-muted small">
+                            {{ 'mautic.core.pagination.info'|trans({'%count%': totalCount, '%page%': page, '%total%': totalPages}) }}
+                        </p>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

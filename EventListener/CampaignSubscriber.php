@@ -226,6 +226,11 @@ class CampaignSubscriber implements EventSubscriberInterface
             return;
         }
 
+        // Add campaign and event info to config for logging
+        $eventArray = $event->getEvent();
+        $config['campaign_id'] = $eventArray['campaign']['id'] ?? null;
+        $config['event_id'] = $eventArray['id'] ?? null;
+
         // Send lead data to FastPath SOAP service
         $result = $this->fastPathSender->send($lead, $schema, $config);
 

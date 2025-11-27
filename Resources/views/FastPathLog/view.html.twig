@@ -1,0 +1,281 @@
+{% extends '@MauticCore/Default/content.html.twig' %}
+
+{% block headerTitle %}
+    {{ 'mautic.fastpath.log.header.view'|trans({'%id%': log.id}) }}
+{% endblock %}
+
+{% block actions %}
+    <div class="btn-group">
+        <a href="{{ path('mautic_fastpath_log_index') }}"
+           class="btn btn-default btn-sm"
+           data-toggle="ajax">
+            <i class="fa fa-arrow-left"></i> {{ 'mautic.core.back'|trans }}
+        </a>
+        <a href="{{ path('mautic_fastpath_log_delete', {'id': log.id}) }}"
+           class="btn btn-danger btn-sm"
+           data-toggle="ajax"
+           data-method="DELETE"
+           onclick="return confirm('{{ 'mautic.core.form.confirmbatchdelete'|trans }}');">
+            <i class="fa fa-trash"></i> {{ 'mautic.core.form.delete'|trans }}
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="pa-md">
+    {# Status Header #}
+    <div class="row mb-3">
+        <div class="col-md-12">
+            {% if log.status == 'SUCCESS' %}
+                <div class="alert alert-success">
+                    <i class="fa fa-check-circle fa-2x pull-left"></i>
+                    <h4 class="mb-0">{{ 'mautic.fastpath.log.status.success'|trans }}</h4>
+                    <p class="mb-0">{{ 'mautic.fastpath.log.success.message'|trans }}</p>
+                </div>
+            {% else %}
+                <div class="alert alert-danger">
+                    <i class="fa fa-times-circle fa-2x pull-left"></i>
+                    <h4 class="mb-0">{{ 'mautic.fastpath.log.status.failed'|trans }}</h4>
+                    <p class="mb-0">{{ log.errorMessage }}</p>
+                    {% if log.faultCode %}
+                        <small>Fault Code: <code>{{ log.faultCode }}</code></small>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Log Information #}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">
+                        <i class="fa fa-info-circle"></i> {{ 'mautic.fastpath.log.info'|trans }}
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    <dl class="dl-horizontal">
+                        <dt>{{ 'mautic.core.id'|trans }}:</dt>
+                        <dd>#{{ log.id }}</dd>
+
+                        <dt>{{ 'mautic.fastpath.log.messageid'|trans }}:</dt>
+                        <dd><code>{{ log.messageId }}</code></dd>
+
+                        <dt>{{ 'mautic.fastpath.log.environment'|trans }}:</dt>
+                        <dd>
+                            <span class="label label-info">{{ log.environment }}</span>
+                        </dd>
+
+                        <dt>{{ 'mautic.fastpath.log.fastlist'|trans }}:</dt>
+                        <dd><strong>{{ log.fastList }}</strong></dd>
+
+                        <dt>{{ 'mautic.fastpath.log.functiontype'|trans }}:</dt>
+                        <dd>{{ log.functionType }}</dd>
+
+                        <dt>{{ 'mautic.fastpath.log.duration'|trans }}:</dt>
+                        <dd>
+                            {% if log.durationMs %}
+                                {{ log.durationMs }} ms
+                                {% if log.durationMs > 5000 %}
+                                    <span class="label label-warning">Slow</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>{{ 'mautic.core.date.added'|trans }}:</dt>
+                        <dd>{{ log.createdAt|date('Y-m-d H:i:s') }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">
+                        <i class="fa fa-link"></i> {{ 'mautic.fastpath.log.connection'|trans }}
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    <dl class="dl-horizontal">
+                        <dt>{{ 'mautic.fastpath.log.wsdl'|trans }}:</dt>
+                        <dd>
+                            <code class="small" style="word-break: break-all;">{{ log.wsdlUrl }}</code>
+                        </dd>
+
+                        <dt>{{ 'mautic.lead.lead'|trans }}:</dt>
+                        <dd>
+                            {% if log.lead %}
+                                <a href="{{ path('mautic_contact_action', {'objectAction': 'view', 'objectId': log.lead.id}) }}"
+                                   target="_blank">
+                                    <i class="fa fa-user"></i>
+                                    {{ log.lead.firstname }} {{ log.lead.lastname }}
+                                    ({{ log.lead.email }})
+                                </a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>{{ 'mautic.aspectfile.schema'|trans }}:</dt>
+                        <dd>
+                            {% if log.schema %}
+                                {{ log.schema.name }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>{{ 'mautic.campaign.campaign'|trans }}:</dt>
+                        <dd>
+                            {% if log.campaignId %}
+                                Campaign #{{ log.campaignId }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt>{{ 'mautic.aspectfile.event'|trans }}:</dt>
+                        <dd>
+                            {% if log.eventId %}
+                                Event #{{ log.eventId }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Record Line (Fixed-Width Data) #}
+    {% if log.recordLine %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    <i class="fa fa-align-left"></i> {{ 'mautic.fastpath.log.recordline'|trans }}
+                    <small class="text-muted">({{ log.recordLine|length }} characters)</small>
+                </h3>
+            </div>
+            <div class="panel-body">
+                <pre class="pre-scrollable" style="font-family: monospace; white-space: pre; overflow-x: auto; background: #f5f5f5; padding: 10px;">{{ log.recordLine }}</pre>
+            </div>
+        </div>
+    {% endif %}
+
+    {# Custom Fields #}
+    {% set customFields = log.customFieldsArray %}
+    {% if customFields|length > 0 %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    <i class="fa fa-list"></i> {{ 'mautic.fastpath.log.customfields'|trans }}
+                </h3>
+            </div>
+            <div class="panel-body">
+                <table class="table table-bordered table-sm">
+                    <thead>
+                        <tr>
+                            <th>{{ 'mautic.core.name'|trans }}</th>
+                            <th>{{ 'mautic.core.value'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, value in customFields %}
+                            <tr>
+                                <td><strong>{{ key }}</strong></td>
+                                <td>{{ value|default('-') }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    {# SOAP Request/Response #}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">
+                        <i class="fa fa-arrow-right text-primary"></i> {{ 'mautic.fastpath.log.request'|trans }}
+                        <button type="button" class="btn btn-xs btn-default pull-right"
+                                onclick="copyToClipboard('request-payload')">
+                            <i class="fa fa-copy"></i> {{ 'mautic.core.copy'|trans }}
+                        </button>
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    {% if requestXml %}
+                        <pre id="request-payload" class="pre-scrollable" style="max-height: 400px; background: #1e1e1e; color: #d4d4d4; padding: 10px; font-size: 11px;">{{ requestXml }}</pre>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> {{ 'mautic.fastpath.log.request.notavailable'|trans }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">
+                        <i class="fa fa-arrow-left text-success"></i> {{ 'mautic.fastpath.log.response'|trans }}
+                        <button type="button" class="btn btn-xs btn-default pull-right"
+                                onclick="copyToClipboard('response-payload')">
+                            <i class="fa fa-copy"></i> {{ 'mautic.core.copy'|trans }}
+                        </button>
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    {% if responseXml %}
+                        <pre id="response-payload" class="pre-scrollable" style="max-height: 400px; background: #1e1e1e; color: #d4d4d4; padding: 10px; font-size: 11px;">{{ responseXml }}</pre>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> {{ 'mautic.fastpath.log.response.notavailable'|trans }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Error Details (if failed) #}
+    {% if log.status == 'FAILED' and log.errorMessage %}
+        <div class="panel panel-danger">
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    <i class="fa fa-exclamation-triangle"></i> {{ 'mautic.fastpath.log.error.details'|trans }}
+                </h3>
+            </div>
+            <div class="panel-body">
+                <pre class="bg-danger" style="color: #fff; padding: 15px;">{{ log.errorMessage }}</pre>
+                {% if log.faultCode %}
+                    <p class="mt-2">
+                        <strong>SOAP Fault Code:</strong> <code>{{ log.faultCode }}</code>
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function copyToClipboard(elementId) {
+    var element = document.getElementById(elementId);
+    var text = element.textContent || element.innerText;
+
+    navigator.clipboard.writeText(text).then(function() {
+        alert('Copied to clipboard!');
+    }).catch(function(err) {
+        console.error('Failed to copy: ', err);
+    });
+}
+</script>
+{% endblock %}

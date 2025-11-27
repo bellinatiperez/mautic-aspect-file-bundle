@@ -49,6 +49,30 @@ return [
                 'path' => '/aspectfile/batches/process',
                 'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\BatchController::processAction',
             ],
+            // FastPath Log routes
+            'mautic_fastpath_log_index' => [
+                'path' => '/fastpath/logs/{page}',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\FastPathLogController::indexAction',
+                'defaults' => ['page' => 1],
+            ],
+            'mautic_fastpath_log_view' => [
+                'path' => '/fastpath/log/{id}',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\FastPathLogController::viewAction',
+                'requirements' => ['id' => '\d+'],
+            ],
+            'mautic_fastpath_log_delete' => [
+                'path' => '/fastpath/log/{id}/delete',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\FastPathLogController::deleteAction',
+                'requirements' => ['id' => '\d+'],
+            ],
+            'mautic_fastpath_log_clear' => [
+                'path' => '/fastpath/logs/clear',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\FastPathLogController::clearAction',
+            ],
+            'mautic_fastpath_log_export' => [
+                'path' => '/fastpath/logs/export',
+                'controller' => 'MauticPlugin\MauticAspectFileBundle\Controller\FastPathLogController::exportAction',
+            ],
         ],
     ],
 
@@ -71,6 +95,18 @@ return [
                     'route' => 'mautic_aspectfile_batch_index',
                     'parent' => 'mautic.core.channels',
                     'priority' => 64,
+                    'checks' => [
+                        'integration' => [
+                            'AspectFile' => [
+                                'enabled' => true,
+                            ],
+                        ],
+                    ],
+                ],
+                'mautic.fastpath.menu.logs' => [
+                    'route' => 'mautic_fastpath_log_index',
+                    'parent' => 'mautic.core.channels',
+                    'priority' => 63,
                     'checks' => [
                         'integration' => [
                             'AspectFile' => [
@@ -183,6 +219,7 @@ return [
                     'monolog.logger.mautic',
                     'mautic.aspectfile.service.field_mapper',
                     'mautic.aspectfile.service.file_generator',
+                    'doctrine.orm.entity_manager',
                 ],
             ],
         ],
@@ -210,6 +247,20 @@ return [
                     'mautic.core.service.flashbag',
                     'twig',
                     'mautic.aspectfile.model.aspectfile',
+                    'router',
+                ],
+                'public' => true,
+                'tags' => [
+                    'controller.service_arguments',
+                ],
+            ],
+            'mautic.aspectfile.controller.fastpath_log' => [
+                'class' => \MauticPlugin\MauticAspectFileBundle\Controller\FastPathLogController::class,
+                'arguments' => [
+                    'doctrine',
+                    'translator',
+                    'mautic.core.service.flashbag',
+                    'twig',
                     'router',
                 ],
                 'public' => true,
