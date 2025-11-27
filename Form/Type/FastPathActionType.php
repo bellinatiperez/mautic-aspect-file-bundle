@@ -61,10 +61,11 @@ class FastPathActionType extends AbstractType
             [
                 'label' => 'WSDL URL',
                 'required' => true,
-                'data' => 'http://bpctaasp1alme.bp.local:8000/FastPathService?wsdl',
+                'empty_data' => 'http://bpctaasp1alme.bp.local:8000/FastPathService?wsdl',
                 'attr' => [
                     'class' => 'form-control',
                     'tooltip' => 'FastPath SOAP service WSDL URL',
+                    'placeholder' => 'http://bpctaasp1alme.bp.local:8000/FastPathService?wsdl',
                 ],
             ]
         );
@@ -89,11 +90,12 @@ class FastPathActionType extends AbstractType
             [
                 'label' => 'Function Type',
                 'required' => true,
-                'data' => 1,
+                'empty_data' => '1',
                 'attr' => [
                     'class' => 'form-control',
                     'tooltip' => 'FastPath function type (integer)',
                     'min' => 1,
+                    'placeholder' => '1',
                 ],
             ]
         );
@@ -104,12 +106,13 @@ class FastPathActionType extends AbstractType
             [
                 'label' => 'Timeout (seconds)',
                 'required' => false,
-                'data' => 30,
+                'empty_data' => '30',
                 'attr' => [
                     'class' => 'form-control',
                     'tooltip' => 'SOAP request timeout in seconds',
                     'min' => 5,
                     'max' => 120,
+                    'placeholder' => '30',
                 ],
             ]
         );
