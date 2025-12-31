@@ -22,6 +22,7 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -34,6 +35,7 @@ class AspectFileIntegration extends AbstractIntegration
         EventDispatcherInterface $dispatcher,
         CacheStorageHelper $cacheStorageHelper,
         EntityManager $em,
+        SessionInterface $session,
         RequestStack $requestStack,
         RouterInterface $router,
         TranslatorInterface $translator,
@@ -52,6 +54,7 @@ class AspectFileIntegration extends AbstractIntegration
             $dispatcher,
             $cacheStorageHelper,
             $em,
+            $session,
             $requestStack,
             $router,
             $translator,
